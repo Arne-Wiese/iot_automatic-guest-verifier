@@ -14,14 +14,53 @@
 #include <sys/byteorder.h>
 #include <zephyr.h>
 
+#include <device.h>
+
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/conn.h>
 #include <bluetooth/uuid.h>
 #include <bluetooth/gatt.h>
 #include <bluetooth/services/bas.h>
+#include <bluetooth/rfcomm.h>
 
 #include "hts.h"
+
+
+#define BT_UUID_SERVICE BT_UUID_DECLARE_16(0x0001)
+#define BT_UUID_CHARACTERISTIC BT_UUID_DECLARE_16(0x0002)
+
+static uint8_t gatt_data[256] = {0};  // Datenpuffer für das Charakteristikum
+
+static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
+{
+    // Daten vom Flutter-App erhalten
+    // Verarbeite die empfangenen Daten nach Bedarf
+    // Du kannst auf die empfangenen Daten über den 'buf'-Zeiger zugreifen
+    printk("Daten erhalten");
+    // Sende eine Antwort zurück an das Flutter-App
+    const char response[] = "Antwortdaten";
+    memcpy(gatt_data, response, sizeof(response));
+    return len;
+}
+
+static struct bt_gatt_attr spp_gatt_attrs[] = {
+    BT_GATT_PRIMARY_SERVICE(BT_UUID_SERVICE),
+    BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP, BT_GATT_PERM_WRITE, NULL, spp_gatt_write, NULL),
+};
+
+static struct bt_gatt_service spp_gatt_service = BT_GATT_SERVICE(spp_gatt_attrs);
+
+void setup_gatt_service(void)
+{
+    int err;
+
+    err = bt_gatt_service_register(&spp_gatt_service);
+    if (err) {
+        printk("Failed to register GATT service (err %d)\n", err);
+        return;
+    }
+}
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -30,6 +69,7 @@ static const struct bt_data ad[] = {
 		      BT_UUID_16_ENCODE(BT_UUID_DIS_VAL),
 		      BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
 };
+
 
 static void connected(struct bt_conn *conn, uint8_t err)
 {
@@ -97,19 +137,20 @@ void main(void)
 {
 	int err;
 
+	
+
 	err = bt_enable(NULL);
 	if (err) {
 		printk("Bluetooth init failed (err %d)\n", err);
 		return;
 	}
+	setup_gatt_service();
 
 	bt_ready();
 
-	bt_conn_auth_cb_register(&auth_cb_display);
+	
+    bt_conn_auth_cb_register(&auth_cb_display);
 
-	/* Implement indicate. At the moment there is no suitable way
-	 * of starting delayed work so we do it here
-	 */
 	while (1) {
 		k_sleep(K_SECONDS(1));
 
@@ -119,4 +160,6 @@ void main(void)
 		/* Battery level simulation */
 		bas_notify();
 	}
+	
+
 }

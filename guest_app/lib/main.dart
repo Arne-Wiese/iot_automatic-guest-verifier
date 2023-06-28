@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 
@@ -166,9 +169,50 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
     });
   }
 
+
+
   void connectToDevice(BluetoothDevice device) {
-    // Implement your logic to connect to the selected device
-    // Example: device.connect();
+    device.connect();
+    device.state.listen((state) async {
+      if (state == BluetoothDeviceState.connected) {
+        print('Verbindung hergestellt mit ${device.name}');
+
+        sendDataToDoor(device, "Test");
+
+        // Führen Sie hier Ihre erforderlichen Aktionen mit der Verbindung durch
+        // Beispiel: Daten senden/empfangen, Charakteristiken lesen/schreiben, usw.
+
+        // Trennen Sie die Verbindung, wenn sie nicht mehr benötigt wird
+        // await device.disconnect();
+
+      } else if (state == BluetoothDeviceState.disconnected) {
+        print('Fehler beim Verbinden mit ${device.name}');
+      }
+    });
+
+
+  }
+
+  void sendDataToDoor(BluetoothDevice device, String data) async {
+
+    List<BluetoothService> services = await device.discoverServices();
+
+    // Suchen Sie die gewünschte Charakteristik in den gefundenen Diensten
+    for (BluetoothService service in services) {
+      for (BluetoothCharacteristic c in service.characteristics) {
+        if (c.uuid.toString() == "00000002-0000-1000-8000-00805F9B34FB") {
+          await c.write(utf8.encode(data), withoutResponse: false);
+          // Empfange die Antwort vom Charakteristikum
+          c.value.listen((value) {
+            String response = utf8.decode(value);
+            print("Antwort von Tür erhalten: $response");
+          });
+          print("Daten wurden an Zephyr OS gesendet");
+        }
+      }
+    }
+
+
   }
 
   @override
