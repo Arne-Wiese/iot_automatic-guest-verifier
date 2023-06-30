@@ -140,7 +140,8 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   List<ScanResult> scanResults = [];
   bool isScanning = false;
-  late BluetoothCharacteristic characteristic;
+
+
 
   @override
   void initState() {
@@ -172,14 +173,18 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
 
 
 
-  void connectToDevice(BluetoothDevice device) {
+  void connectToDevice(BluetoothDevice device, context) {
+    StreamSubscription<BluetoothDeviceState> subscription;
       device.connect();
 
-      device.state.listen((state) async {
+      subscription = device.state.listen((state) async {
         if (state == BluetoothDeviceState.connected) {
           print('Verbindung hergestellt mit ${device.name}');
 
-          sendDataToDoor(device);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => MyCustomWidget( device: device)),
+          );
 
           // Führen Sie hier Ihre erforderlichen Aktionen mit der Verbindung durch
           // Beispiel: Daten senden/empfangen, Charakteristiken lesen/schreiben, usw.
@@ -192,37 +197,6 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
         }
       });
     }
-
-  void sendDataToDoor(BluetoothDevice device) async {
-    List<BluetoothService> services = await device.discoverServices();
-
-    // Suchen Sie die gewünschte Charakteristik in den gefundenen Diensten
-    for (BluetoothService service in services) {
-      for (BluetoothCharacteristic c in service.characteristics) {
-            if (c.uuid.toString() == "00000002-0000-1000-8000-00805f9b34fb") {
-                characteristic = c;
-
-                String request = "Hello, world!"; // Der UTF-8-Request, den du senden möchtest
-                List<int> data = utf8.encode(request); // UTF-8-Request in Bytes umwandeln
-
-                await c.write(data, withoutResponse: false);
-                // Empfange die Antwort vom Charakteristikum
-                listenToChannel();
-            }
-          }
-    }
-
-  }
-
-
-  void listenToChannel() async {
-
-    characteristic.value.listen((value) {
-      String response = utf8.decode(value);
-      print("Antwort erhalten: $response");
-      // Hier kannst du die empfangenen Daten weiterverarbeiten
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +221,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
                   title: Text(device.name),
                   subtitle: Text(device.id.toString()),
                   onTap: () {
-                    connectToDevice(device);
+                    connectToDevice(device, context);
                   },
                 );
               },
@@ -257,4 +231,100 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
       ),
     );
   }
+}
+
+class MyCustomWidget extends StatefulWidget {
+  final BluetoothDevice device;
+
+  const MyCustomWidget({super.key, required this.device});
+  @override
+  _MyCustomWidgetState createState() => _MyCustomWidgetState();
+}
+
+class _MyCustomWidgetState extends State<MyCustomWidget> {
+  late BluetoothCharacteristic characteristic;
+  late StreamSubscription<List<int>> subscription;
+  String access = 'Warte auf Antwort...';
+
+  @override
+  Widget build(BuildContext context) {
+    BluetoothDevice device = widget.device;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(device.name),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Connected to:'),
+            Text('Name: ${device.name}'),
+            Text('Adresse: ${device.id.toString()}'),
+            const SizedBox(height: 16),
+            Text(access),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    sendDataToDoor(device);
+                  },
+                  child: const Text('Get Access'),
+
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    try {
+                      subscription.cancel();
+                    }catch(e){
+                      // Hhh
+                    }
+                    device.disconnect();
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const DeviceSelectionScreen()),
+                    );
+                  },
+                  child: const Text('Disconnect'),
+
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
+  void sendDataToDoor(BluetoothDevice device) async {
+    List<BluetoothService> services = await device.discoverServices();
+
+    // Suchen Sie die gewünschte Charakteristik in den gefundenen Diensten
+    for (BluetoothService service in services) {
+      for (BluetoothCharacteristic c in service.characteristics) {
+        if (c.uuid.toString() == "00000002-0000-1000-8000-00805f9b34fb") {
+          characteristic = c;
+        }
+      }
+
+    }
+    String request = "Hello, world!"; // Der UTF-8-Request, den du senden möchtest
+    List<int> data = utf8.encode(request); // UTF-8-Request in Bytes umwandeln
+    await characteristic.setNotifyValue(true);
+    subscription = characteristic.value.listen((value) {
+      String response = utf8.decode(value);
+      setState(() {
+        access = response;
+      });
+      print("Antwort erhalten: $response");
+      // Hier kannst du die empfangenen Daten weiterverarbeiten
+    });
+    await characteristic.write(data);
+
+  }
+
 }

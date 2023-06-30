@@ -29,9 +29,10 @@
 
 #define BT_UUID_SERVICE BT_UUID_DECLARE_16(0x0001)
 #define BT_UUID_CHARACTERISTIC BT_UUID_DECLARE_16(0x0002)
+#define BT_UUID_DESCRIPTOR BT_UUID_DECLARE_16(0x2902)
 
 
-static uint8_t gatt_data[256] = {0};  // Datenpuffer für das Charakteristikum
+static uint8_t gatt_data[20] = {0};  // Datenpuffer für das Charakteristikum
 
 static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
@@ -41,20 +42,19 @@ static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *a
 	const char* str= (const char*)buf;
     printk("Daten erhalten %s", str);
     // Sende eine Antwort zurück an das Flutter-App
-    const char response[] = "Antwortdaten";
+    const char response[] = "Komm rein!";
     memcpy(gatt_data, response, sizeof(response));
-
-	const char* utf8String = "Komm rein!";
-	size_t utf8Length = strlen(utf8String);
-	int success = bt_gatt_notify(conn, attr, utf8String, utf8Length);
+	int success = bt_gatt_notify(conn, attr, gatt_data, sizeof(gatt_data));
 	printk("Gesendet %d", success);
 
 	return len; 
 }
 
+
 static struct bt_gatt_attr spp_gatt_attrs[] = {
     BT_GATT_PRIMARY_SERVICE(BT_UUID_SERVICE),
-    BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC, BT_GATT_CHRC_WRITE, BT_GATT_PERM_WRITE, NULL, spp_gatt_write, NULL),
+    BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_WRITE, NULL, spp_gatt_write, NULL),
+	BT_GATT_DESCRIPTOR(BT_UUID_DESCRIPTOR, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL, NULL, NULL)
 };
 
 static struct bt_gatt_service spp_gatt_service = BT_GATT_SERVICE(spp_gatt_attrs);
