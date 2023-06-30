@@ -140,6 +140,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   List<ScanResult> scanResults = [];
   bool isScanning = false;
+  late BluetoothCharacteristic characteristic;
 
   @override
   void initState() {
@@ -172,51 +173,60 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
 
 
   void connectToDevice(BluetoothDevice device) {
-    device.connect();
-    device.state.listen((state) async {
-      if (state == BluetoothDeviceState.connected) {
-        print('Verbindung hergestellt mit ${device.name}');
+      device.connect();
 
-        sendDataToDoor(device, "Test");
+      device.state.listen((state) async {
+        if (state == BluetoothDeviceState.connected) {
+          print('Verbindung hergestellt mit ${device.name}');
 
-        // Führen Sie hier Ihre erforderlichen Aktionen mit der Verbindung durch
-        // Beispiel: Daten senden/empfangen, Charakteristiken lesen/schreiben, usw.
+          sendDataToDoor(device);
 
-        // Trennen Sie die Verbindung, wenn sie nicht mehr benötigt wird
-        // await device.disconnect();
+          // Führen Sie hier Ihre erforderlichen Aktionen mit der Verbindung durch
+          // Beispiel: Daten senden/empfangen, Charakteristiken lesen/schreiben, usw.
 
-      } else if (state == BluetoothDeviceState.disconnected) {
-        print('Fehler beim Verbinden mit ${device.name}');
-      }
-    });
+          // Trennen Sie die Verbindung, wenn sie nicht mehr benötigt wird
+          // await device.disconnect();
 
+        } else if (state == BluetoothDeviceState.disconnected) {
+          print('Fehler beim Verbinden mit ${device.name}');
+        }
+      });
+    }
 
-  }
-
-  void sendDataToDoor(BluetoothDevice device, String data) async {
-
+  void sendDataToDoor(BluetoothDevice device) async {
     List<BluetoothService> services = await device.discoverServices();
 
     // Suchen Sie die gewünschte Charakteristik in den gefundenen Diensten
     for (BluetoothService service in services) {
       for (BluetoothCharacteristic c in service.characteristics) {
-        if (c.uuid.toString() == "00000002-0000-1000-8000-00805F9B34FB") {
-          await c.write(utf8.encode(data), withoutResponse: false);
-          // Empfange die Antwort vom Charakteristikum
-          c.value.listen((value) {
-            String response = utf8.decode(value);
-            print("Antwort von Tür erhalten: $response");
-          });
-          print("Daten wurden an Zephyr OS gesendet");
-        }
-      }
+            if (c.uuid.toString() == "00000002-0000-1000-8000-00805f9b34fb") {
+                characteristic = c;
+
+                String request = "Hello, world!"; // Der UTF-8-Request, den du senden möchtest
+                List<int> data = utf8.encode(request); // UTF-8-Request in Bytes umwandeln
+
+                await c.write(data, withoutResponse: false);
+                // Empfange die Antwort vom Charakteristikum
+                listenToChannel();
+            }
+          }
     }
 
+  }
 
+
+  void listenToChannel() async {
+
+    characteristic.value.listen((value) {
+      String response = utf8.decode(value);
+      print("Antwort erhalten: $response");
+      // Hier kannst du die empfangenen Daten weiterverarbeiten
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    print('started');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Device Selection'),
