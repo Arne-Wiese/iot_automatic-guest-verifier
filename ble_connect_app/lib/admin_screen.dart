@@ -134,7 +134,7 @@ class _TwoButtonsWidgetState extends State<TwoButtonsWidget> {
           });
 
 
-        }else if (success && i == 0){
+        }else if (success && i == 1){
           setState(() {
             visible = true;
             text = 'Successfully deleted a guest!';
