@@ -103,7 +103,8 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     );
 
     if(userInput != null && userInput != ""){
-      String password = userInput; // Der UTF-8-Request, den du senden möchtest
+      String password = userInput;
+      print(userInput);// Der UTF-8-Request, den du senden möchtest
       List<int> data = utf8.encode(password);
       try {
         await adminAuthenticationCharacteristic.setNotifyValue(true);
@@ -114,6 +115,7 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
       adminAuthenticationSubscription = adminAuthenticationCharacteristic.value.listen((value) {
         List<int> response = value;
         bool authenticated = response[0] == 1;
+        print(authenticated);
 
         if(authenticated){
 

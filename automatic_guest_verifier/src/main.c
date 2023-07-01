@@ -34,7 +34,6 @@
 #define BT_UUID_CHARACTERISTIC_REMOVE_ADMIN BT_UUID_DECLARE_16(0x0006)
 
 #define BT_UUID_DESCRIPTOR BT_UUID_DECLARE_16(0x2902)
-#define BT_UUID_DESCRIPTOR_ADMIN BT_UUID_DECLARE_16(0x2903)
 
 #define MAX_STRINGS 15
 #define MAX_LENGTH 100
@@ -88,7 +87,7 @@ static ssize_t spp_gatt_write_admin(struct bt_conn *conn, const struct bt_gatt_a
     printk("Daten erhalten %s", str);
 	int response = 0;
 
- 	if(strcmp(str, PASSWORD)){
+ 	if(!strcmp(str, PASSWORD)){
 		response = 1;
 	}else{
 		response = 0;
@@ -109,9 +108,7 @@ static struct bt_gatt_attr spp_gatt_attrs[] = {
 static struct bt_gatt_attr spp_gatt_attrs_admin[] = {
     BT_GATT_PRIMARY_SERVICE(BT_UUID_SERVICE_ADMIN),
     BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC_AUTH_ADMIN, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_WRITE, NULL, spp_gatt_write_admin, NULL),
-	BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC_ADD_ADMIN, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_WRITE, NULL, spp_gatt_write_admin, NULL),
-	BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC_REMOVE_ADMIN, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_WRITE, NULL, spp_gatt_write_admin, NULL),
-	BT_GATT_DESCRIPTOR(BT_UUID_DESCRIPTOR_ADMIN, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL, NULL, NULL)
+	BT_GATT_DESCRIPTOR(BT_UUID_DESCRIPTOR, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL, NULL, NULL)
 };
 
 static struct bt_gatt_service spp_gatt_service = BT_GATT_SERVICE(spp_gatt_attrs);
