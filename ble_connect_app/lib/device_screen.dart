@@ -113,12 +113,12 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
         print(e);
       }
       isAdminAuthenticationSubscriptionSet = true;
-      adminAuthenticationSubscription = adminAuthenticationCharacteristic.value.listen((value) {
+      adminAuthenticationSubscription = adminAuthenticationCharacteristic.value.listen((value) async {
         List<int> response = value;
         bool authenticated = response[0] == 1;
 
         if(authenticated){
-          leavePage();
+          await leavePage();
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => TwoButtonsWidget(device: device)),
@@ -149,7 +149,7 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     );
   }
 
-  void leavePage() async{
+  Future<void> leavePage() async{
     if(isGuestAccessSubscriptionSet) {
       await guestAccessSubscription.cancel();
     }
