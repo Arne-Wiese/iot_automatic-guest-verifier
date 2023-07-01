@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:ble_example/admin_screen.dart';
 import 'package:device_info/device_info.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -99,7 +100,7 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     }
     String? userInput = await showDialog<String>(
       context: context,
-      builder: (context) => OverlayDialog(),
+      builder: (context) => OverlayDialog( text: 'Passwort:',),
     );
 
     if(userInput != null && userInput != ""){
@@ -115,13 +116,22 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
       adminAuthenticationSubscription = adminAuthenticationCharacteristic.value.listen((value) {
         List<int> response = value;
         bool authenticated = response[0] == 1;
-        print(authenticated);
 
         if(authenticated){
+          leavePage();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => TwoButtonsWidget(device: device)),
+          );
 
         }else{
           setState(() {
             authErrorIsVisible = true;
+          });
+          Future.delayed(Duration(seconds: 3), () {
+            setState(() {
+              authErrorIsVisible = false;
+            });
           });
         }
         // Hier kannst du die empfangenen Daten weiterverarbeiten
@@ -131,17 +141,21 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     }
   }
   void handleDisconnect(BluetoothDevice device) async{
+    leavePage();
+    device.disconnect();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const DeviceSelectionScreen()),
+    );
+  }
+
+  void leavePage() async{
     if(isGuestAccessSubscriptionSet) {
       await guestAccessSubscription.cancel();
     }
     if(isAdminAuthenticationSubscriptionSet){
       await adminAuthenticationSubscription.cancel();
     }
-    device.disconnect();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const DeviceSelectionScreen()),
-    );
   }
 
   void sendDataToDoor(BluetoothDevice device) async {

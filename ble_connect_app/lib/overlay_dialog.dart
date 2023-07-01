@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
 class OverlayDialog extends StatefulWidget {
+
+  final String text;
+
+  OverlayDialog({required this.text});
+
   @override
   _OverlayDialogState createState() => _OverlayDialogState();
 }
@@ -11,6 +16,7 @@ class _OverlayDialogState extends State<OverlayDialog> {
 
   @override
   Widget build(BuildContext context) {
+    String text = widget.text;
     return GestureDetector(
       onTap: () {
         // Schließe den Dialog, wenn außerhalb des Textfeldes getippt wird
@@ -30,7 +36,7 @@ class _OverlayDialogState extends State<OverlayDialog> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Passwort:'),
+                Text(text),
                 SizedBox(height: 10),
                 TextField(
                   controller: _textEditingController,
