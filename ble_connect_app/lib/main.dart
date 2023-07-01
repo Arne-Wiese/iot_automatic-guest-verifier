@@ -61,7 +61,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    startScan();
+    //startScan();
   }
 
   void startScan() {
@@ -94,13 +94,13 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
     bluetoothDeviceStateSubscription = device.state.listen((state) async {
       if (state == BluetoothDeviceState.connected) {
         print('Verbindung hergestellt mit ${device.name}');
-
+        await scanResultSubscription.cancel();
+        await bluetoothDeviceStateSubscription.cancel();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => MyCustomWidget( device: device)),
         );
-        scanResultSubscription.cancel();
-        bluetoothDeviceStateSubscription.cancel();
+
 
         // Führen Sie hier Ihre erforderlichen Aktionen mit der Verbindung durch
         // Beispiel: Daten senden/empfangen, Charakteristiken lesen/schreiben, usw.
@@ -116,7 +116,15 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('started');
+    List<ScanResult> filteredScanResults = scanResults.where((scanResult) {
+      List<String> services = scanResult.advertisementData.serviceUuids;
+      for (String service in services) {
+        if (service == "00000002-0000-1000-8000-00805f9b34fb") {
+          return true; // Das Gerät bietet den gewünschten Service an
+        }
+      }
+      return false; // Das Gerät bietet den gewünschten Service nicht an
+    }).toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Device Selection'),
@@ -129,9 +137,9 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: scanResults.length,
+              itemCount: filteredScanResults.length,
               itemBuilder: (context, index) {
-                ScanResult scanResult = scanResults[index];
+                ScanResult scanResult = filteredScanResults[index];
                 BluetoothDevice device = scanResult.device;
                 return ListTile(
                   title: Text(device.name),
@@ -161,6 +169,7 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
   late BluetoothCharacteristic characteristic;
   late StreamSubscription<List<int>> subscription;
   String access = 'Warte auf Antwort...';
+  bool isSubscriptionSet = false;
 
   @override
   Widget build(BuildContext context) {
@@ -192,16 +201,7 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    try {
-                      subscription.cancel();
-                    }catch(e){
-                      // Hhh
-                    }
-                    device.disconnect();
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const DeviceSelectionScreen()),
-                    );
+                    handleDisconnect(device);
                   },
                   child: const Text('Disconnect'),
 
@@ -214,7 +214,16 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     );
   }
 
-
+  void handleDisconnect(BluetoothDevice device) async{
+    if(isSubscriptionSet) {
+      await subscription.cancel();
+    }
+    device.disconnect();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const DeviceSelectionScreen()),
+    );
+  }
 
   void sendDataToDoor(BluetoothDevice device) async {
     List<BluetoothService> services = await device.discoverServices();
@@ -230,13 +239,12 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     }
     String request = "Hello, world!"; // Der UTF-8-Request, den du senden möchtest
     List<int> data = utf8.encode(request);
-    print(characteristic.uuid.toString()); // UTF-8-Request in Bytes umwandeln
     try {
       await characteristic.setNotifyValue(true);
     }catch(e){
-      //hhekjkk
+      print(e);
     }
-
+    isSubscriptionSet = true;
     subscription = characteristic.value.listen((value) {
       String response = utf8.decode(value);
       setState(() {
@@ -245,6 +253,7 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
       print("Antwort erhalten: $response");
       // Hier kannst du die empfangenen Daten weiterverarbeiten
     });
+
     await characteristic.write(data);
 
   }
