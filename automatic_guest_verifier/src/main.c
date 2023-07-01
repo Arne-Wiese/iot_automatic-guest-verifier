@@ -29,6 +29,23 @@
 #define BT_UUID_CHARACTERISTIC BT_UUID_DECLARE_16(0x0002)
 #define BT_UUID_DESCRIPTOR BT_UUID_DECLARE_16(0x2902)
 
+#define MAX_STRINGS 5
+#define MAX_LENGTH 100
+
+char strings[MAX_STRINGS][MAX_LENGTH];
+
+static bool isStringInArray(const char* searchString, const char stringArray[][MAX_LENGTH], int arraySize) {
+    for (int i = 0; i < arraySize; i++) {
+        if (strcmp(searchString, stringArray[i]) == 0) {
+            return true; // String found in the array
+        }
+    }
+    return false; // String not found in the array
+}
+
+static void writeID(const char* str, int index){
+	strcpy(strings[index], str);
+}
 
 static uint8_t gatt_data[20] = {0};  // Datenpuffer für das Charakteristikum
 
@@ -37,17 +54,22 @@ static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *a
     // Daten vom Flutter-App erhalten
     // Verarbeite die empfangenen Daten nach Bedarf
     // Du kannst auf die empfangenen Daten über den 'buf'-Zeiger zugreifen
+	writeID("b242071667515fc6", 0);
 	const char* str= (const char*)buf;
     printk("Daten erhalten %s", str);
-    // Sende eine Antwort zurück an das Flutter-App
-    const char response[] = "Komm rein!";
+ 	char response[10];
+	if(isStringInArray(str, strings, MAX_STRINGS)){
+		// Sende eine Antwort zurück an das Flutter-App
+		strcpy(response, "Komm rein");
+	}else{
+		strcpy(response, "Geh Weg!");
+	}
     memcpy(gatt_data, response, sizeof(response));
 	int success = bt_gatt_notify(conn, attr, gatt_data, sizeof(gatt_data));
 	printk("Gesendet %d", success);
 
 	return len; 
 }
-
 
 static struct bt_gatt_attr spp_gatt_attrs[] = {
     BT_GATT_PRIMARY_SERVICE(BT_UUID_SERVICE),
@@ -125,8 +147,6 @@ static struct bt_conn_auth_cb auth_cb_display = {
 void main(void)
 {
 	int err;
-
-	
 
 	err = bt_enable(NULL);
 	if (err) {

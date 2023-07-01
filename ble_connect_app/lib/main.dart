@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'device_screen.dart';
+import 'package:device_info/device_info.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -237,7 +239,8 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
       }
 
     }
-    String request = "Hello, world!"; // Der UTF-8-Request, den du senden möchtest
+    String uniqueIdentifier = await getDeviceIdentifier();
+    String request = uniqueIdentifier; // Der UTF-8-Request, den du senden möchtest
     List<int> data = utf8.encode(request);
     try {
       await characteristic.setNotifyValue(true);
@@ -258,4 +261,9 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
 
   }
 
+  Future<String> getDeviceIdentifier() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    return androidInfo.androidId;
+  }
 }
