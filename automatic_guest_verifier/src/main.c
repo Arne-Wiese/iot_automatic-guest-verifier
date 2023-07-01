@@ -77,12 +77,12 @@ static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *a
     str[len] = '\0';  // Null-terminate the copied string
 
     printk("Daten erhalten: %s", str);
- 	char response[10];
+ 	char response[11];
 	if(findListElement(&list, str)){
 		// Sende eine Antwort zurück an das Flutter-App
-		strcpy(response, "Komm rein");
+		strcpy(response, "Komm rein!");
 	}else{
-		strcpy(response, "Geh Weg!");
+		strcpy(response, "Geh Weg!!!");
 	}
     memcpy(gatt_data, response, sizeof(response));
 	int success = bt_gatt_notify(conn, attr, gatt_data, sizeof(gatt_data));
