@@ -257,6 +257,4 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
     return androidInfo.androidId;
   }
-
-
 }
