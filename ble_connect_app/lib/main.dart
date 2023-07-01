@@ -55,6 +55,8 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   FlutterBluePlus flutterBlue = FlutterBluePlus.instance;
   List<ScanResult> scanResults = [];
   bool isScanning = false;
+  late StreamSubscription<List<ScanResult>> scanResultSubscription;
+  late StreamSubscription<BluetoothDeviceState> bluetoothDeviceStateSubscription;
 
 
 
@@ -68,7 +70,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
     flutterBlue.startScan(timeout: const Duration(seconds: 4));
 
     // Abonnieren Sie die Scan-Results und aktualisieren Sie die Liste
-    flutterBlue.scanResults.listen((List<ScanResult> results) {
+    scanResultSubscription = flutterBlue.scanResults.listen((List<ScanResult> results) {
       setState(() {
         scanResults = results;
       });
@@ -89,10 +91,9 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
 
 
   void connectToDevice(BluetoothDevice device, context) {
-    StreamSubscription<BluetoothDeviceState> subscription;
     device.connect();
 
-    subscription = device.state.listen((state) async {
+    bluetoothDeviceStateSubscription = device.state.listen((state) async {
       if (state == BluetoothDeviceState.connected) {
         print('Verbindung hergestellt mit ${device.name}');
 
@@ -100,6 +101,8 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
           context,
           MaterialPageRoute(builder: (context) => MyCustomWidget( device: device)),
         );
+        scanResultSubscription.cancel();
+        bluetoothDeviceStateSubscription.cancel();
 
         // Führen Sie hier Ihre erforderlichen Aktionen mit der Verbindung durch
         // Beispiel: Daten senden/empfangen, Charakteristiken lesen/schreiben, usw.
