@@ -29,6 +29,10 @@
 #define BT_UUID_CHARACTERISTIC BT_UUID_DECLARE_16(0x0002)
 #define BT_UUID_DESCRIPTOR BT_UUID_DECLARE_16(0x2902)
 
+#define MAX_STRINGS 5
+#define MAX_LENGTH 100
+
+char strings[MAX_STRINGS][MAX_LENGTH];
 
 static uint8_t gatt_data[20] = {0};  // Datenpuffer für das Charakteristikum
 
@@ -39,6 +43,8 @@ static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *a
     // Du kannst auf die empfangenen Daten über den 'buf'-Zeiger zugreifen
 	const char* str= (const char*)buf;
     printk("Daten erhalten %s", str);
+	strcpy(strings[0], str);
+	printk("String array %s", strings[0]);
     // Sende eine Antwort zurück an das Flutter-App
     const char response[] = "Komm rein!";
     memcpy(gatt_data, response, sizeof(response));
