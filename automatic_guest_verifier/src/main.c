@@ -24,8 +24,6 @@
 #include <bluetooth/services/bas.h>
 #include <bluetooth/rfcomm.h>
 
-#include "hts.h"
-
 
 #define BT_UUID_SERVICE BT_UUID_DECLARE_16(0x0001)
 #define BT_UUID_CHARACTERISTIC BT_UUID_DECLARE_16(0x0002)
@@ -73,9 +71,7 @@ void setup_gatt_service(void)
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
-		      BT_UUID_16_ENCODE(BT_UUID_HTS_VAL),
-		      BT_UUID_16_ENCODE(BT_UUID_DIS_VAL),
-		      BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
+	          BT_UUID_16_ENCODE(0x0002)),
 };
 
 
@@ -104,8 +100,6 @@ static void bt_ready(void)
 
 	printk("Bluetooth initialized\n");
 
-	hts_init();
-
 	err = bt_le_adv_start(BT_LE_ADV_CONN_NAME, ad, ARRAY_SIZE(ad), NULL, 0);
 	if (err) {
 		printk("Advertising failed to start (err %d)\n", err);
@@ -128,19 +122,6 @@ static struct bt_conn_auth_cb auth_cb_display = {
 	.cancel = auth_cancel,
 };
 
-static void bas_notify(void)
-{
-	uint8_t battery_level = bt_bas_get_battery_level();
-
-	battery_level--;
-
-	if (!battery_level) {
-		battery_level = 100U;
-	}
-
-	bt_bas_set_battery_level(battery_level);
-}
-
 void main(void)
 {
 	int err;
@@ -160,13 +141,7 @@ void main(void)
     bt_conn_auth_cb_register(&auth_cb_display);
 
 	while (1) {
-		k_sleep(K_SECONDS(1));
 
-		/* Temperature measurements simulation */
-		hts_indicate();
-
-		/* Battery level simulation */
-		bas_notify();
 	}
 	
 
