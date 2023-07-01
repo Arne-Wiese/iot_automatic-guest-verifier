@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'device_screen.dart';
+import 'overlay_dialog.dart';
 import 'package:device_info/device_info.dart';
 
 
@@ -159,111 +160,3 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   }
 }
 
-class MyCustomWidget extends StatefulWidget {
-  final BluetoothDevice device;
-
-  const MyCustomWidget({super.key, required this.device});
-  @override
-  _MyCustomWidgetState createState() => _MyCustomWidgetState();
-}
-
-class _MyCustomWidgetState extends State<MyCustomWidget> {
-  late BluetoothCharacteristic characteristic;
-  late StreamSubscription<List<int>> subscription;
-  String access = 'Warte auf Antwort...';
-  bool isSubscriptionSet = false;
-
-  @override
-  Widget build(BuildContext context) {
-    BluetoothDevice device = widget.device;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(device.name),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Connected to:'),
-            Text('Name: ${device.name}'),
-            Text('Adresse: ${device.id.toString()}'),
-            const SizedBox(height: 16),
-            Text(access),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    sendDataToDoor(device);
-                  },
-                  child: const Text('Get Access'),
-
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    handleDisconnect(device);
-                  },
-                  child: const Text('Disconnect'),
-
-                ),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  void handleDisconnect(BluetoothDevice device) async{
-    if(isSubscriptionSet) {
-      await subscription.cancel();
-    }
-    device.disconnect();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const DeviceSelectionScreen()),
-    );
-  }
-
-  void sendDataToDoor(BluetoothDevice device) async {
-    List<BluetoothService> services = await device.discoverServices();
-
-    // Suchen Sie die gewünschte Charakteristik in den gefundenen Diensten
-    for (BluetoothService service in services) {
-      for (BluetoothCharacteristic c in service.characteristics) {
-        if (c.uuid.toString() == "00000002-0000-1000-8000-00805f9b34fb") {
-          characteristic = c;
-        }
-      }
-
-    }
-    String uniqueIdentifier = await getDeviceIdentifier();
-    String request = uniqueIdentifier; // Der UTF-8-Request, den du senden möchtest
-    List<int> data = utf8.encode(request);
-    try {
-      await characteristic.setNotifyValue(true);
-    }catch(e){
-      print(e);
-    }
-    isSubscriptionSet = true;
-    subscription = characteristic.value.listen((value) {
-      String response = utf8.decode(value);
-      setState(() {
-        access = response;
-      });
-      print("Antwort erhalten: $response");
-      // Hier kannst du die empfangenen Daten weiterverarbeiten
-    });
-
-    await characteristic.write(data);
-
-  }
-
-  Future<String> getDeviceIdentifier() async {
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-    return androidInfo.androidId;
-  }
-}
