@@ -27,16 +27,22 @@
 
 #define BT_UUID_SERVICE BT_UUID_DECLARE_16(0x0001)
 #define BT_UUID_CHARACTERISTIC BT_UUID_DECLARE_16(0x0002)
+
 #define BT_UUID_SERVICE_ADMIN BT_UUID_DECLARE_16(0x0003)
-#define BT_UUID_CHARACTERISTIC_ADMIN BT_UUID_DECLARE_16(0x0004)
+#define BT_UUID_CHARACTERISTIC_AUTH_ADMIN BT_UUID_DECLARE_16(0x0004)
+#define BT_UUID_CHARACTERISTIC_ADD_ADMIN BT_UUID_DECLARE_16(0x0005)
+#define BT_UUID_CHARACTERISTIC_REMOVE_ADMIN BT_UUID_DECLARE_16(0x0006)
+
 #define BT_UUID_DESCRIPTOR BT_UUID_DECLARE_16(0x2902)
 #define BT_UUID_DESCRIPTOR_ADMIN BT_UUID_DECLARE_16(0x2903)
 
-#define MAX_STRINGS 5
+#define MAX_STRINGS 15
 #define MAX_LENGTH 100
 
+#define PASSWORD "password"
+
 char strings[MAX_STRINGS][MAX_LENGTH];
-int index = 0;
+int counter = 0;
 
 static bool isStringInArray(const char* searchString, const char stringArray[][MAX_LENGTH], int arraySize) {
     for (int i = 0; i < arraySize; i++) {
@@ -48,8 +54,8 @@ static bool isStringInArray(const char* searchString, const char stringArray[][M
 }
 
 static void writeID(const char* str){
-	strcpy(strings[index], str);
-	index ++;
+	strcpy(strings[counter], str);
+	counter ++;
 }
 
 static uint8_t gatt_data[20] = {0};  // Datenpuffer für das Charakteristikum
@@ -78,16 +84,16 @@ static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *a
 
 static ssize_t spp_gatt_write_admin(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
-    // Daten vom Flutter-App erhalten
-    // Verarbeite die empfangenen Daten nach Bedarf
-    // Du kannst auf die empfangenen Daten über den 'buf'-Zeiger zugreifen
-	
-	const char* str= (const char*)buf;
+    const char* str= (const char*)buf;
     printk("Daten erhalten %s", str);
-	writeID(str);
- 	char response[20] = "registered ";
-	strcat(response, str);
-    memcpy(gatt_data, response, sizeof(response));
+	int response = 0;
+
+ 	if(strcmp(str, PASSWORD)){
+		response = 1;
+	}else{
+		response = 0;
+	}
+    memcpy(gatt_data, &response, sizeof(response));
 	int success = bt_gatt_notify(conn, attr, gatt_data, sizeof(gatt_data));
 	printk("Gesendet %d", success);
 
@@ -102,8 +108,10 @@ static struct bt_gatt_attr spp_gatt_attrs[] = {
 
 static struct bt_gatt_attr spp_gatt_attrs_admin[] = {
     BT_GATT_PRIMARY_SERVICE(BT_UUID_SERVICE_ADMIN),
-    BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC_ADMIN, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_WRITE_AUTHEN, NULL, spp_gatt_write_admin, NULL),
-	BT_GATT_DESCRIPTOR(BT_UUID_DESCRIPTOR, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL, NULL, NULL)
+    BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC_AUTH_ADMIN, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_WRITE, NULL, spp_gatt_write_admin, NULL),
+	BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC_ADD_ADMIN, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_WRITE, NULL, spp_gatt_write_admin, NULL),
+	BT_GATT_CHARACTERISTIC(BT_UUID_CHARACTERISTIC_REMOVE_ADMIN, BT_GATT_CHRC_WRITE | BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_WRITE, NULL, spp_gatt_write_admin, NULL),
+	BT_GATT_DESCRIPTOR(BT_UUID_DESCRIPTOR_ADMIN, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL, NULL, NULL)
 };
 
 static struct bt_gatt_service spp_gatt_service = BT_GATT_SERVICE(spp_gatt_attrs);
@@ -125,14 +133,11 @@ void setup_gatt_service(void)
     }
 }
 
-
-
-
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
 	          BT_UUID_16_ENCODE(0x0002),
-			  BT_UUID_16_ENCODE(0x0003)),
+			  BT_UUID_16_ENCODE(0x0004)),
 };
 
 
