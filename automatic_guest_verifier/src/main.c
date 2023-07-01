@@ -44,10 +44,6 @@
 LinkedList list;
 int counter = 0;
 
-static void writeID(const char* str){
-	insert(&list, str);
-}
-
 #include <stdio.h>
 #include <string.h>
 
@@ -73,7 +69,6 @@ static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *a
     // Daten vom Flutter-App erhalten
     // Verarbeite die empfangenen Daten nach Bedarf
     // Du kannst auf die empfangenen Daten über den 'buf'-Zeiger zugreifen
-	writeID("b242071667515fc6");
 	const char* bufPtr = (const char*)buf;
     const int maxStrLen = 100;  // Maximum length of the string
 
@@ -135,11 +130,11 @@ static ssize_t spp_gatt_manage_admin(struct bt_conn *conn, const struct bt_gatt_
 	int response = 0;
 
  	if(!strcmp(&indicator, "a")){
-		response = 1;
 		insert(&list, str);
-	}else if(!strcmp(&indicator, "d")){
 		response = 1;
+	}else if(!strcmp(&indicator, "d")){
 		removeElement(&list, str);
+		response = 1;
 	}else{
 		response = 0;
 	}
