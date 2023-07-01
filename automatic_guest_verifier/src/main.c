@@ -66,7 +66,7 @@ static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *a
     // Du kannst auf die empfangenen Daten über den 'buf'-Zeiger zugreifen
 	writeID("b242071667515fc6");
 	const char* str= (const char*)buf;
-    printk("Daten erhalten %s", str);
+    printk("Daten erhalten: %.*s",len , str);
  	char response[10];
 	if(isStringInArray(str, strings, MAX_STRINGS)){
 		// Sende eine Antwort zurück an das Flutter-App
@@ -84,7 +84,7 @@ static ssize_t spp_gatt_write(struct bt_conn *conn, const struct bt_gatt_attr *a
 static ssize_t spp_gatt_write_admin(struct bt_conn *conn, const struct bt_gatt_attr *attr, const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
     const char* str= (const char*)buf;
-    printk("Daten erhalten %s", str);
+    printk("Daten erhalten: %.*s",len , str);
 	int response = 0;
 
  	if(!strcmp(str, PASSWORD)){
