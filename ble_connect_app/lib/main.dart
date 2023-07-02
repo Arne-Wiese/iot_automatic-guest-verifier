@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'device_screen.dart';
-import 'overlay_dialog.dart';
 import 'package:device_info/device_info.dart';
 
 
@@ -58,16 +57,25 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   bool isScanning = false;
   late StreamSubscription<List<ScanResult>> scanResultSubscription;
   late StreamSubscription<BluetoothDeviceState> bluetoothDeviceStateSubscription;
+  String identifier = 'Lade identifier...';
 
-
-
+  Future<String> getDeviceIdentifier() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    return androidInfo.androidId;
+  }
   @override
   void initState() {
     super.initState();
-    //startScan();
+    getDeviceIdentifier().then((value) {
+      setState(() {
+        identifier = value;
+    });
+    });
   }
 
   void startScan() {
+    disconnectAllDevices();
     flutterBlue.startScan(timeout: const Duration(seconds: 4));
 
     // Abonnieren Sie die Scan-Results und aktualisieren Sie die Liste
@@ -87,6 +95,17 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
     setState(() {
       isScanning = false;
     });
+  }
+
+  void disconnectAllDevices() async {
+    // Scanne nach verbundenen Geräten
+    List<BluetoothDevice> connectedDevices = await flutterBlue.connectedDevices;
+    print(connectedDevices);
+
+    // Trenne jedes verbundene Gerät
+    for (BluetoothDevice device in connectedDevices) {
+      await device.disconnect();
+    }
   }
 
 
@@ -154,9 +173,33 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
               },
             ),
           ),
+          GestureDetector(
+          onTap: () {
+          Clipboard.setData(ClipboardData(text: identifier));
+          final snackBar = SnackBar(content: Text('Identifier in die Zwischenablage kopiert', textAlign: TextAlign.center,));
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+          },
+          child:
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+            Text(
+            'Persönlichen Identifier kopieren',
+            style: TextStyle(fontSize: 16),
+          ),
+            SizedBox(width: 8), // Abstand zwischen Text und Icon
+            Icon(Icons.content_copy), // Kopier-Icon
+          ]),
+    ),
+          const SizedBox(height: 64),
         ],
       ),
     );
   }
+
+
+
+
 }
+
 

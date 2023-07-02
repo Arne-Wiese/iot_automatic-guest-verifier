@@ -61,7 +61,7 @@ class _TwoButtonsWidgetState extends State<TwoButtonsWidget> {
               visible: visible,
               child: Text(
                 text,
-                style: TextStyle(color: color),
+                style: TextStyle(color: color), textAlign: TextAlign.center,
               ),
             ),
           ],

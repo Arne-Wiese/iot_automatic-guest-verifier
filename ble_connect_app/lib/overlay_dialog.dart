@@ -28,7 +28,7 @@ class _OverlayDialogState extends State<OverlayDialog> {
           child: Container(
             padding: EdgeInsets.all(20),
             width: 200,
-            height: 200,
+            height: 300,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
