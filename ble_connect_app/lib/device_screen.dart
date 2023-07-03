@@ -12,7 +12,8 @@ import 'overlay_dialog.dart';
 class MyCustomWidget extends StatefulWidget {
   final BluetoothDevice device;
 
-  const MyCustomWidget({super.key, required this.device});
+  const MyCustomWidget({Key? key, required this.device}) : super(key: key);
+
   @override
   _MyCustomWidgetState createState() => _MyCustomWidgetState();
 }
@@ -35,6 +36,20 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     return Scaffold(
       appBar: AppBar(
         title: Text(device.name),
+        actions: [
+          IconButton(
+            onPressed: () {
+              handleDisconnect(device);
+            },
+            icon: Icon(Icons.bluetooth_disabled),
+          ),
+          IconButton(
+            onPressed: () {
+              authenticate(device);
+            },
+            icon: Icon(Icons.security),
+          ),
+        ],
       ),
       body: Center(
         child: Column(
@@ -44,42 +59,30 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
             Text('Name: ${device.name}'),
             Text('Adresse: ${device.id.toString()}'),
             const SizedBox(height: 16),
-            Text(access),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    sendDataToDoor(device);
-                  },
-                  child: const Text('Get Access'),
-
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    handleDisconnect(device);
-                  },
-                  child: const Text('Disconnect'),
-
-                ),
-              ],
+            Text(
+              access,
+              style: TextStyle(
+                color: Colors.blue,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: () {
-                authenticate(device);
-
+                sendDataToDoor(device);
               },
-              child: const Text('Als Admin authentifizieren'),
+              icon: Icon(Icons.lock_open),
+              label: const Text('Request Access'),
             ),
+            const SizedBox(height: 16),
             const SizedBox(height: 32),
             Visibility(
-            visible: authErrorIsVisible,
-            child: Text(
-            'Falsches Passwort!',
-            style: TextStyle(color: Colors.red),
-            ),
+              visible: authErrorIsVisible,
+              child: Text(
+                'Wrong password!',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ],
         ),
@@ -98,50 +101,52 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
         }
       }
     }
+
     String? userInput = await showDialog<String>(
       context: context,
-      builder: (context) => OverlayDialog( text: 'Passwort:',),
+      builder: (context) => OverlayDialog(text: 'Passwort:'),
     );
 
-    if(userInput != null && userInput != ""){
+    if (userInput != null && userInput.isNotEmpty) {
       String password = userInput;
-      print(userInput);// Der UTF-8-Request, den du senden möchtest
+      print(userInput); // Der UTF-8-Request, den du senden möchtest
       List<int> data = utf8.encode(password);
       try {
         await adminAuthenticationCharacteristic.setNotifyValue(true);
-      }catch(e){
+      } catch (e) {
         print(e);
       }
       isAdminAuthenticationSubscriptionSet = true;
-      adminAuthenticationSubscription = adminAuthenticationCharacteristic.value.listen((value) async {
-        List<int> response = value;
-        bool authenticated = response[0] == 1;
+      adminAuthenticationSubscription =
+          adminAuthenticationCharacteristic.value.listen((value) async {
+            List<int> response = value;
+            bool authenticated = response[0] == 1;
 
-        if(authenticated){
-          await leavePage();
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => TwoButtonsWidget(device: device)),
-          );
-
-        }else{
-          setState(() {
-            authErrorIsVisible = true;
+            if (authenticated) {
+              await leavePage();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => TwoButtonsWidget(device: device)),
+              );
+            } else {
+              setState(() {
+                authErrorIsVisible = true;
+              });
+              Future.delayed(Duration(seconds: 3), () {
+                setState(() {
+                  authErrorIsVisible = false;
+                });
+              });
+            }
+            // Hier kannst du die empfangenen Daten weiterverarbeiten
           });
-          Future.delayed(Duration(seconds: 3), () {
-            setState(() {
-              authErrorIsVisible = false;
-            });
-          });
-        }
-        // Hier kannst du die empfangenen Daten weiterverarbeiten
-      });
 
       await adminAuthenticationCharacteristic.write(data);
     }
   }
-  void handleDisconnect(BluetoothDevice device) async{
-    leavePage();
+
+  void handleDisconnect(BluetoothDevice device) async {
+    await leavePage();
     device.disconnect();
     Navigator.pushReplacement(
       context,
@@ -149,11 +154,11 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     );
   }
 
-  Future<void> leavePage() async{
-    if(isGuestAccessSubscriptionSet) {
+  Future<void> leavePage() async {
+    if (isGuestAccessSubscriptionSet) {
       await guestAccessSubscription.cancel();
     }
-    if(isAdminAuthenticationSubscriptionSet){
+    if (isAdminAuthenticationSubscriptionSet) {
       await adminAuthenticationSubscription.cancel();
     }
   }
@@ -168,14 +173,14 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
           guestAccessCharacteristic = c;
         }
       }
-
     }
+
     String uniqueIdentifier = await getDeviceIdentifier();
     String request = uniqueIdentifier; // Der UTF-8-Request, den du senden möchtest
     List<int> data = utf8.encode(request);
     try {
       await guestAccessCharacteristic.setNotifyValue(true);
-    }catch(e){
+    } catch (e) {
       print(e);
     }
     isGuestAccessSubscriptionSet = true;
@@ -189,7 +194,6 @@ class _MyCustomWidgetState extends State<MyCustomWidget> {
     });
 
     await guestAccessCharacteristic.write(data);
-
   }
 
   Future<String> getDeviceIdentifier() async {
